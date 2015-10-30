@@ -52,6 +52,14 @@
 (define-simple-macro (redex-chk e:test ...)
   (begin e.unit ...))
 
+(define-simple-macro (redex-relation-chk
+                      relation:id
+                      [(~and opt:keyword
+                             (~or (~datum #:t) (~datum #:f)))
+                       args:expr ...] ...)
+  (redex-chk
+   [opt (relation args ...)] ...))
+
 (provide redex-chk)
 
 (module+ test
@@ -85,4 +93,10 @@
    #:= (even (add2 (add2 (add2 Z))))
    (even (S (S (S (S (S (S Z)))))))
    
-   #:f (even (S Z))))
+   #:f (even (S Z)))
+
+  (redex-relation-chk
+   even
+   [#:t Z]
+   [#:f (S Z)]
+   [#:t (S (S Z))]))
