@@ -1,1 +1,39 @@
-a short-hand for writing rackunit tests
+a short-hand for writing redex tests, similar to the rackunit-chk pkg
+
+example:
+
+
+```racket
+(module+ test
+  (define-language Nats
+    [Nat ::= Z (S Nat)])
+  
+  (define-metafunction Nats
+    add2 : Nat -> Nat
+    [(add2 Nat) (S (S Nat))])
+  
+  (define-judgment-form Nats
+    #:mode (even I)
+    #:contract (even Nat)
+    [---------- "E-Zero"
+                (even Z)]
+    
+    [(even Nat)
+     ---------- "E-Step"
+     (even (S (S Nat)))])
+  
+  (redex-chk
+   Z Z
+   #:f Z (S Z)
+   #:t (even Z)
+   #:f (even (S Z))
+   #:f #:= (add2 Z) (S (S (S Z)))
+   
+   #:= (add2 (add2 (add2 Z)))
+   (S (S (S (S (S (S Z))))))
+   
+   #:= (even (add2 (add2 (add2 Z))))
+   (even (S (S (S (S (S (S Z)))))))
+   
+   #:f (even (S Z))))
+```
