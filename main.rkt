@@ -1,8 +1,5 @@
 #lang racket/base
-(require racket/match
-         racket/function
-         racket/list
-         redex/reduction-semantics
+(require redex/reduction-semantics
          rackunit
          syntax/parse/define
          (for-syntax racket/base
@@ -47,20 +44,30 @@
     [pattern (~seq a:expr)
              #:with (c:strict-test) (syntax/loc #'a (#:t a))
              #:attr unit #'c.unit
-             #:attr fail-unit #'c.fail-unit]))
+             #:attr fail-unit #'c.fail-unit])
+
+  (define-splicing-syntax-class (rel-test rel)
+    #:commit
+    #:attributes (unit)
+    [pattern (~and a [#:t args:expr ...])
+             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))]
+    [pattern (~and a [#:f args:expr ...])
+             #:attr unit (quasisyntax/loc #'a (check-false (term (#,rel args ...))))]
+    [pattern (~and a [args:expr ...])
+             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))]))
 
 (define-simple-macro (redex-chk e:test ...)
   (begin e.unit ...))
 
-(define-simple-macro (redex-relation-chk
-                      relation:id
-                      [(~and opt:keyword
-                             (~or (~datum #:t) (~datum #:f)))
-                       args:expr ...] ...)
-  (redex-chk
-   [opt (relation args ...)] ...))
+(define-syntax (redex-relation-chk stx)
+  (syntax-parse stx
+    [(_ relation:id
+        (~var e (rel-test #'relation)) ...)
+     #`(begin e.unit ...)]))
 
-(provide redex-chk)
+
+
+(provide redex-chk redex-relation-chk)
 
 (module+ test
   (define-language Nats
@@ -74,11 +81,21 @@
     #:mode (even I)
     #:contract (even Nat)
     [---------- "E-Zero"
-                (even Z)]
+     (even Z)]
     
     [(even Nat)
      ---------- "E-Step"
      (even (S (S Nat)))])
+
+  (define-judgment-form Nats
+    #:mode (equal-nats I I)
+    #:contract (equal-nats Nat Nat)
+    [---------- "Eq-Zero"
+     (equal-nats Z Z)]
+    
+    [(equal-nats Nat_1 Nat_2)
+     ---------- "Eq-Step"
+     (equal-nats (S Nat_1) (S Nat_2))])
   
   (redex-chk
    Z Z
@@ -99,4 +116,10 @@
    even
    [#:t Z]
    [#:f (S Z)]
-   [#:t (S (S Z))]))
+   [(S (S Z))])
+
+  (redex-relation-chk
+   equal-nats
+   [#:t Z Z]
+   [#:f (S Z) Z]
+   [(S (S Z)) (add2 Z)]))

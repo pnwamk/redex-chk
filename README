@@ -20,11 +20,21 @@ example:
     #:mode (even I)
     #:contract (even Nat)
     [---------- "E-Zero"
-                (even Z)]
+     (even Z)]
     
     [(even Nat)
      ---------- "E-Step"
      (even (S (S Nat)))])
+
+  (define-judgment-form Nats
+    #:mode (equal-nats I I)
+    #:contract (equal-nats Nat Nat)
+    [---------- "Eq-Zero"
+     (equal-nats Z Z)]
+    
+    [(equal-nats Nat_1 Nat_2)
+     ---------- "Eq-Step"
+     (equal-nats (S Nat_1) (S Nat_2))])
   
   (redex-chk
    Z Z
@@ -41,9 +51,15 @@ example:
    
    #:f (even (S Z)))
 
-   (redex-relation-chk
-    even
-    [#:t Z]
-    [#:f (S Z)]
-    [#:t (S (S Z))]))
+  (redex-relation-chk
+   even
+   [#:t Z]
+   [#:f (S Z)]
+   [(S (S Z))])
+
+  (redex-relation-chk
+   equal-nats
+   [#:t Z Z]
+   [#:f (S Z) Z]
+   [(S (S Z)) (add2 Z)]))
 ```
