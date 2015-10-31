@@ -1,4 +1,5 @@
-A short-hand for writing redex tests, similar to the rackunit-chk pkg.
+A short-hand for writing redex tests, similar to the
+[rackunit-chk](https://github.com/jeapostrophe/rackunit-chk) pkg.
 
 The main feature besides providing short-hand for rackunit test
 primitives is that all expressions ```e``` are automatically
