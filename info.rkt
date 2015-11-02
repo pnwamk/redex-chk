@@ -1,2 +1,3 @@
 #lang info
-(define deps '("base" "rackunit-lib"))
+(define deps '("redex-lib"
+               "base" "rackunit-lib"))
