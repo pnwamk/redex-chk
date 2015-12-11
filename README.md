@@ -3,7 +3,7 @@ A short-hand for writing redex tests, similar to the
 
 The main feature besides providing short-hand for rackunit test
 primitives is that all expressions ```e``` are automatically
-wrapped by redex's 
+wrapped by redex's ````term```, so they are redex expressions.
 
 example:
 
@@ -36,6 +36,12 @@ example:
     [(equal-nats Nat_1 Nat_2)
      ---------- "Eq-Step"
      (equal-nats (S Nat_1) (S Nat_2))])
+
+(define-judgment-form Nats
+    #:mode (pred I O)
+    #:contract (pred Nat Nat)
+    [---------- "Pred"
+     (pred (S Nat) Nat)])
   
   (redex-chk
    Z Z
@@ -62,5 +68,11 @@ example:
    equal-nats
    [#:t Z Z]
    [#:f (S Z) Z]
-   [(S (S Z)) (add2 Z)]))
+   [(S (S Z)) (add2 Z)])
+
+   (redex-judgment-holds-chk
+    pred
+    [(S Z) Z]
+    [(S (S Z)) (S Z)]
+    [#:f Z any]))
 ```

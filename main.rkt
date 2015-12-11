@@ -54,7 +54,20 @@
     [pattern (~and a [#:f args:expr ...])
              #:attr unit (quasisyntax/loc #'a (check-false (term (#,rel args ...))))]
     [pattern (~and a [args:expr ...])
-             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))]))
+             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))])
+
+  (define-splicing-syntax-class (judg-holds-test rel)
+    #:commit
+    #:attributes (unit)
+    [pattern (~and a [#:t args:expr ...])
+             #:attr unit (quasisyntax/loc
+                             #'a (check-true (judgment-holds (#,rel args ...))))]
+    [pattern (~and a [#:f args:expr ...])
+             #:attr unit (quasisyntax/loc
+                             #'a (check-false (judgment-holds (#,rel args ...))))]
+    [pattern (~and a [args:expr ...])
+             #:attr unit (quasisyntax/loc
+                             #'a (check-true (judgment-holds (#,rel args ...))))]))
 
 (define-simple-macro (redex-chk e:test ...)
   (begin e.unit ...))
@@ -65,9 +78,15 @@
         (~var e (rel-test #'relation)) ...)
      #`(begin e.unit ...)]))
 
+(define-syntax (redex-judgment-holds-chk stx)
+  (syntax-parse stx
+    [(_ judgment:id
+        (~var e (judg-holds-test #'judgment)) ...)
+     #`(begin e.unit ...)]))
 
 
-(provide redex-chk redex-relation-chk)
+
+(provide redex-chk redex-relation-chk redex-judgment-holds-chk)
 
 (module+ test
   (define-language Nats
@@ -96,6 +115,12 @@
     [(equal-nats Nat_1 Nat_2)
      ---------- "Eq-Step"
      (equal-nats (S Nat_1) (S Nat_2))])
+
+  (define-judgment-form Nats
+    #:mode (pred I O)
+    #:contract (pred Nat Nat)
+    [---------- "Pred"
+     (pred (S Nat) Nat)])
   
   (redex-chk
    Z Z
@@ -122,4 +147,10 @@
    equal-nats
    [#:t Z Z]
    [#:f (S Z) Z]
-   [(S (S Z)) (add2 Z)]))
+   [(S (S Z)) (add2 Z)])
+
+  (redex-judgment-holds-chk
+   pred
+   [(S Z) Z]
+   [(S (S Z)) (S Z)]
+   [#:f Z any]))
