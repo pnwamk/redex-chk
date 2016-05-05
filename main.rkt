@@ -39,6 +39,13 @@
              (syntax/loc #'a
                (check-false
                 (redex-match? lang a (term b))))]
+    [pattern (~seq #:eq (~optional eq? #:defaults ([eq? #'(default-equiv)])) a:expr b:expr)
+             #:attr unit
+             (syntax/loc #'a
+               (check equal? (term a) (term b)))
+             #:attr fail-unit
+             (syntax/loc #'a
+               (check (compose not equal?) (term a) (term b)))]
     )
 
   (define-splicing-syntax-class (test lang)
@@ -156,7 +163,11 @@
    #:m Nat Z
    #:m #:lang Nats Nat Z
    #:m Nat (S Z)
-   #:f #:m Nat S)
+   #:f #:m Nat S
+
+   #:eq Z Z
+   #:f #:eq Z S
+   #:eq eq? Z Z)
 
   (redex-relation-chk
    even
