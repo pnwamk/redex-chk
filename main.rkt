@@ -26,7 +26,15 @@
                (check-equal? (term a) (term b)))
              #:attr fail-unit
              (syntax/loc #'a
-               (check-not-equal? (term a) (term b)))])
+               (check-not-equal? (term a) (term b)))]
+    [pattern (~seq #:eq (~optional eq? #:defaults ([eq? #'(default-equiv)])) a:expr b:expr)
+             #:attr unit
+             (syntax/loc #'a
+               (check eq? (term a) (term b)))
+             #:attr fail-unit
+             (syntax/loc #'a
+               (check (compose not eq?) (term a) (term b)))]
+    )
 
   (define-splicing-syntax-class test
     #:commit
@@ -91,17 +99,17 @@
 (module+ test
   (define-language Nats
     [Nat ::= Z (S Nat)])
-  
+
   (define-metafunction Nats
     add2 : Nat -> Nat
     [(add2 Nat) (S (S Nat))])
-  
+
   (define-judgment-form Nats
     #:mode (even I)
     #:contract (even Nat)
     [---------- "E-Zero"
      (even Z)]
-    
+
     [(even Nat)
      ---------- "E-Step"
      (even (S (S Nat)))])
@@ -111,7 +119,7 @@
     #:contract (equal-nats Nat Nat)
     [---------- "Eq-Zero"
      (equal-nats Z Z)]
-    
+
     [(equal-nats Nat_1 Nat_2)
      ---------- "Eq-Step"
      (equal-nats (S Nat_1) (S Nat_2))])
@@ -121,21 +129,25 @@
     #:contract (pred Nat Nat)
     [---------- "Pred"
      (pred (S Nat) Nat)])
-  
+
   (redex-chk
    Z Z
    #:f Z (S Z)
    #:t (even Z)
    #:f (even (S Z))
    #:f #:= (add2 Z) (S (S (S Z)))
-   
+
    #:= (add2 (add2 (add2 Z)))
    (S (S (S (S (S (S Z))))))
-   
+
    #:= (even (add2 (add2 (add2 Z))))
    (even (S (S (S (S (S (S Z)))))))
-   
-   #:f (even (S Z)))
+
+   #:f (even (S Z))
+
+   #:eq Z Z
+   #:f #:eq Z S
+   #:eq eq? Z Z)
 
   (redex-relation-chk
    even
