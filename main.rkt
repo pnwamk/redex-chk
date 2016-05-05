@@ -30,10 +30,10 @@
     [pattern (~seq #:eq (~optional eq? #:defaults ([eq? #'(default-equiv)])) a:expr b:expr)
              #:attr unit
              (syntax/loc #'a
-               (check equal? (term a) (term b)))
+               (check eq? (term a) (term b)))
              #:attr fail-unit
              (syntax/loc #'a
-               (check (compose not equal?) (term a) (term b)))]
+               (check (compose not eq?) (term a) (term b)))]
     )
 
   (define-splicing-syntax-class test
