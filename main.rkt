@@ -30,6 +30,7 @@
     ;; TODO: Would be nice to to use (default-language) but redex-match? requires an identifier
     [pattern (~seq #:m (~optional (~seq #:lang lang) #:defaults ([lang lang]))
                    a:expr b:expr)
+             #:fail-unless (identifier? #'lang) "Cannot use #:m without providing a language."
              #:attr unit
              (syntax/loc #'a
                (check-true
@@ -83,7 +84,7 @@
 
 (define-syntax (redex-chk stx)
   (syntax-parse stx
-    [(_ (~optional (~seq #:lang lang:id))
+    [(_ (~optional (~seq #:lang lang:id) #:defaults ([lang #'#f]))
         (~var e (test #'lang)) ...)
      #`(begin e.unit ...)]))
 
