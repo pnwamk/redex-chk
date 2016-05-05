@@ -7,10 +7,10 @@
 
 
 (begin-for-syntax
-  (define-splicing-syntax-class strict-test
+  (define-splicing-syntax-class (strict-test lang)
     #:commit
     #:attributes (unit fail-unit)
-    [pattern (~seq #:f t:test)
+    [pattern (~seq #:f (~var t (test lang)))
              #:attr unit #'t.fail-unit
              #:attr fail-unit #'t.unit]
     [pattern (~seq #:t a:expr)
@@ -26,23 +26,35 @@
                (check-equal? (term a) (term b)))
              #:attr fail-unit
              (syntax/loc #'a
-               (check-not-equal? (term a) (term b)))])
+               (check-not-equal? (term a) (term b)))]
+    ;; TODO: Would be nice to to use (default-language) but redex-match? requires an identifier
+    [pattern (~seq #:m (~optional (~seq #:lang lang) #:defaults ([lang lang]))
+                   a:expr b:expr)
+             #:attr unit
+             (syntax/loc #'a
+               (check-true
+                (redex-match? lang a (term b))))
+             #:attr fail-unit
+             (syntax/loc #'a
+               (check-false
+                (redex-match? lang a (term b))))]
+    )
 
-  (define-splicing-syntax-class test
+  (define-splicing-syntax-class (test lang)
     #:commit
     #:attributes (unit fail-unit)
-    (pattern c:strict-test
+    (pattern (~var c (strict-test lang))
              #:attr unit #'c.unit
              #:attr fail-unit #'c.fail-unit)
-    (pattern (c:strict-test)
+    (pattern ((~var c (strict-test lang)))
              #:attr unit #'c.unit
              #:attr fail-unit #'c.fail-unit)
     [pattern (~seq a:expr b:expr)
-             #:with (c:strict-test) (syntax/loc #'a (#:= a b))
+             #:with ((~var c (strict-test lang))) (syntax/loc #'a (#:= a b))
              #:attr unit #'c.unit
              #:attr fail-unit #'c.fail-unit]
     [pattern (~seq a:expr)
-             #:with (c:strict-test) (syntax/loc #'a (#:t a))
+             #:with ((~var c (strict-test lang))) (syntax/loc #'a (#:t a))
              #:attr unit #'c.unit
              #:attr fail-unit #'c.fail-unit])
 
@@ -69,8 +81,11 @@
              #:attr unit (quasisyntax/loc
                              #'a (check-true (judgment-holds (#,rel args ...))))]))
 
-(define-simple-macro (redex-chk e:test ...)
-  (begin e.unit ...))
+(define-syntax (redex-chk stx)
+  (syntax-parse stx
+    [(_ (~optional (~seq #:lang lang:id))
+        (~var e (test #'lang)) ...)
+     #`(begin e.unit ...)]))
 
 (define-syntax (redex-relation-chk stx)
   (syntax-parse stx
@@ -91,17 +106,17 @@
 (module+ test
   (define-language Nats
     [Nat ::= Z (S Nat)])
-  
+
   (define-metafunction Nats
     add2 : Nat -> Nat
     [(add2 Nat) (S (S Nat))])
-  
+
   (define-judgment-form Nats
     #:mode (even I)
     #:contract (even Nat)
     [---------- "E-Zero"
      (even Z)]
-    
+
     [(even Nat)
      ---------- "E-Step"
      (even (S (S Nat)))])
@@ -111,7 +126,7 @@
     #:contract (equal-nats Nat Nat)
     [---------- "Eq-Zero"
      (equal-nats Z Z)]
-    
+
     [(equal-nats Nat_1 Nat_2)
      ---------- "Eq-Step"
      (equal-nats (S Nat_1) (S Nat_2))])
@@ -121,21 +136,26 @@
     #:contract (pred Nat Nat)
     [---------- "Pred"
      (pred (S Nat) Nat)])
-  
-  (redex-chk
+
+  (redex-chk #:lang Nats
    Z Z
    #:f Z (S Z)
    #:t (even Z)
    #:f (even (S Z))
    #:f #:= (add2 Z) (S (S (S Z)))
-   
+
    #:= (add2 (add2 (add2 Z)))
    (S (S (S (S (S (S Z))))))
-   
+
    #:= (even (add2 (add2 (add2 Z))))
    (even (S (S (S (S (S (S Z)))))))
-   
-   #:f (even (S Z)))
+
+   #:f (even (S Z))
+
+   #:m Nat Z
+   #:m #:lang Nats Nat Z
+   #:m Nat (S Z)
+   #:f #:m Nat S)
 
   (redex-relation-chk
    even
