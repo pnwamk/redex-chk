@@ -66,28 +66,33 @@
              #:attr unit #'c.unit
              #:attr fail-unit #'c.fail-unit])
 
-  (define-splicing-syntax-class (rel-test rel)
+  (define-splicing-syntax-class (rel-test rel dargs)
     #:commit
     #:attributes (unit)
     [pattern (~and a [#:t args:expr ...])
-             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))]
+             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel #,@dargs args ...))))]
     [pattern (~and a [#:f args:expr ...])
-             #:attr unit (quasisyntax/loc #'a (check-false (term (#,rel args ...))))]
+             #:attr unit (quasisyntax/loc #'a (check-false (term (#,rel #,@dargs args ...))))]
     [pattern (~and a [args:expr ...])
-             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel args ...))))])
+             #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel #,@dargs args ...))))])
 
-  (define-splicing-syntax-class (judg-holds-test rel)
+  (define-splicing-syntax-class (judg-holds-test rel dargs)
     #:commit
     #:attributes (unit)
     [pattern (~and a [#:t args:expr ...])
              #:attr unit (quasisyntax/loc
-                             #'a (check-true (judgment-holds (#,rel args ...))))]
+                             #'a (check-true (judgment-holds (#,rel #,@dargs args ...))))]
     [pattern (~and a [#:f args:expr ...])
              #:attr unit (quasisyntax/loc
-                             #'a (check-false (judgment-holds (#,rel args ...))))]
+                             #'a (check-false (judgment-holds (#,rel #,@dargs args ...))))]
     [pattern (~and a [args:expr ...])
              #:attr unit (quasisyntax/loc
-                             #'a (check-true (judgment-holds (#,rel args ...))))]))
+                             #'a (check-true (judgment-holds (#,rel #,@dargs args ...))))])
+
+  (define-syntax-class rel-spec
+    [pattern relation:id
+             #:attr args '()]
+    [pattern (relation:id . args:expr)]))
 
 (define-syntax (redex-chk stx)
   (syntax-parse stx
@@ -97,14 +102,14 @@
 
 (define-syntax (redex-relation-chk stx)
   (syntax-parse stx
-    [(_ relation:id
-        (~var e (rel-test #'relation)) ...)
+    [(_ relation:rel-spec
+        (~var e (rel-test #'relation.relation (attribute relation.args))) ...)
      #`(begin e.unit ...)]))
 
 (define-syntax (redex-judgment-holds-chk stx)
   (syntax-parse stx
-    [(_ judgment:id
-        (~var e (judg-holds-test #'judgment)) ...)
+    [(_ judgment:rel-spec
+        (~var e (judg-holds-test #'judgment.relation (attribute judgment.args))) ...)
      #`(begin e.unit ...)]))
 
 
@@ -181,8 +186,19 @@
    [#:f (S Z) Z]
    [(S (S Z)) (add2 Z)])
 
+  (redex-relation-chk
+   (equal-nats Z)
+   [#:t Z]
+   [#:f (S Z)]
+   [#:f (add2 Z)])
+
   (redex-judgment-holds-chk
    pred
    [(S Z) Z]
    [(S (S Z)) (S Z)]
-   [#:f Z any]))
+   [#:f Z any])
+
+  (redex-judgment-holds-chk
+   (pred (S Z))
+   [Z]
+   [#:f (S Z)]))
