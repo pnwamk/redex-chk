@@ -1,10 +1,33 @@
 #lang racket/base
 (require redex/reduction-semantics
-         rackunit
+         (rename-in rackunit [check-exn ru:check-exn] [check-not-exn ru:check-not-exn])
+         racket/match
          syntax/parse/define
          (for-syntax racket/base
                      syntax/parse))
 
+
+;; copy-pasted from chk
+(define (exn-match x b)
+  (match b
+    [(? string? s)
+     (exn-match x (regexp (regexp-quote s)))]
+    [(? regexp? r)
+     (regexp-match r (exn-message x))]
+    [(? procedure? okay?)
+     (okay? x)]))
+
+(define-syntax-rule (check-exn a b)
+  (ru:check-exn
+   (λ (x) (exn-match x b))
+   (λ () a)))
+
+(define-syntax-rule (check-not-exn a b)
+  (let ()
+    (define av (->values a))
+    (if (res:exn? av)
+      (ru:check-false (exn-match (res:exn-x av) b))
+      (ru:check-pred res:values? av))))
 
 (begin-for-syntax
   (define-splicing-syntax-class (strict-test lang)
@@ -27,6 +50,13 @@
              #:attr fail-unit
              (syntax/loc #'a
                (check-not-equal? (term a) (term b)))]
+    [pattern (~seq #:x a:expr exn-p:expr)
+             #:attr unit
+             (syntax/loc #'a
+               (check-exn (term a) exn-p))
+             #:attr fail-unit
+             (syntax/loc #'a
+               (check-not-exn (term a)))]
     ;; TODO: Would be nice to to use (default-language) but redex-match? requires an identifier
     [pattern (~seq #:m (~optional (~seq #:lang lang) #:defaults ([lang lang]))
                    a:expr b:expr)
@@ -69,6 +99,9 @@
   (define-splicing-syntax-class (rel-test rel dargs)
     #:commit
     #:attributes (unit)
+    [pattern (~and a [#:x args:expr ... exn-p])
+             #:attr unit (quasisyntax/loc
+                             #'a (check-exn (term (#,rel #,@dargs args ...)) exn-p))]
     [pattern (~and a [#:t args:expr ...])
              #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel #,@dargs args ...))))]
     [pattern (~and a [#:f args:expr ...])
@@ -79,6 +112,9 @@
   (define-splicing-syntax-class (judg-holds-test rel dargs)
     #:commit
     #:attributes (unit)
+    [pattern (~and a [#:x args:expr ... exn-p:expr])
+             #:attr unit (quasisyntax/loc
+                             #'a (check-exn (judgment-holds (#,rel #,@dargs args ...)) exn-p) )]
     [pattern (~and a [#:t args:expr ...])
              #:attr unit (quasisyntax/loc
                              #'a (check-true (judgment-holds (#,rel #,@dargs args ...))))]
@@ -159,6 +195,7 @@
 
    #:= (add2 (add2 (add2 Z)))
    (S (S (S (S (S (S Z))))))
+   #:x (add2 5) #rx"not in my domain"
 
    #:= (even (add2 (add2 (add2 Z))))
    (even (S (S (S (S (S (S Z)))))))
@@ -178,7 +215,8 @@
    even
    [#:t Z]
    [#:f (S Z)]
-   [(S (S Z))])
+   [(S (S Z))]
+   [#:x 5 "input values do not match its contract"])
 
   (redex-relation-chk
    equal-nats
@@ -196,7 +234,8 @@
    pred
    [(S Z) Z]
    [(S (S Z)) (S Z)]
-   [#:f Z any])
+   [#:f Z any]
+   [#:x 5 any exn:fail:redex?])
 
   (redex-judgment-holds-chk
    (pred (S Z))
