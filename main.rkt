@@ -101,7 +101,7 @@
     #:attributes (unit)
     [pattern (~and a [#:x args:expr ... exn-p])
              #:attr unit (quasisyntax/loc
-                             #'a (check-exn (term (#,rel args ...)) exn-p))]
+                             #'a (check-exn (term (#,rel #,@dargs args ...)) exn-p))]
     [pattern (~and a [#:t args:expr ...])
              #:attr unit (quasisyntax/loc #'a (check-true (term (#,rel #,@dargs args ...))))]
     [pattern (~and a [#:f args:expr ...])
@@ -114,7 +114,7 @@
     #:attributes (unit)
     [pattern (~and a [#:x args:expr ... exn-p:expr])
              #:attr unit (quasisyntax/loc
-                             #'a (check-exn (judgment-holds (#,rel args ...)) exn-p) )]
+                             #'a (check-exn (judgment-holds (#,rel #,@dargs args ...)) exn-p) )]
     [pattern (~and a [#:t args:expr ...])
              #:attr unit (quasisyntax/loc
                              #'a (check-true (judgment-holds (#,rel #,@dargs args ...))))]
