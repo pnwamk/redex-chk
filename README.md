@@ -98,5 +98,4 @@ example:
    (pred (S Z))
    [Z]
    [#:f (S Z)]))
-   [#:f Z any]))
 ```

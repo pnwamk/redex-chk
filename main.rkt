@@ -240,5 +240,4 @@
   (redex-judgment-holds-chk
    (pred (S Z))
    [Z]
-   [#:f (S Z)]
-   [#:f Z any]))
+   [#:f (S Z)]))
